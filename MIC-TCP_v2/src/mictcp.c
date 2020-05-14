@@ -1,6 +1,7 @@
 #include <mictcp.h>
 #include <api/mictcp_core.h>
 #define MAX_SENDINGS 1000
+#define LOSS_RATE 5 
 /*
  * Permet de créer un socket entre l’application et MIC-TCP
  * Retourne le descripteur du socket ou bien -1 en cas d'erreur
@@ -25,7 +26,7 @@ int mic_tcp_socket(start_mode sm)
    else{
         sock.fd = 1;
         sock.state = CONNECTED;
-        set_loss_rate(0);
+        set_loss_rate(LOSS_RATE);
         return sock.fd;
    }
 }
@@ -89,7 +90,7 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
     mic_tcp_pdu pdu_emis ; 
     mic_tcp_pdu ack ; 
     int nb_sent = 0 ; 
-    unsigned long timeout = 100 ; //100 ms
+    unsigned long timeout = 100 ; // 100 ms 
     int size_PDU ;
     int ack_recu= 0;
 
@@ -128,11 +129,10 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
             if ((IP_recv(&(ack),&addr_sock_dest, timeout) >= 0) && (ack.header.ack == 1) && (ack.header.ack_num == PE))  {
                 ack_recu = 1 ; 
             } 
-            else { //timer fini ou numéro !=PE
-                // il faut renvoyer le PDU
+            else { /* Timer fini ou numéro != PE : il faut renvoyer le PDU */
                 if (nb_sent < MAX_SENDINGS) {
                     size_PDU = IP_send(pdu_emis, addr_sock_dest);
-                    printf("Renvoi du packet : %d, tentative ° : %d.\n",numero_packet,nb_sent);
+                    printf("Renvoi du packet : %d, tentative n° : %d.\n",numero_packet,nb_sent);
                     nb_sent++;
                 }
                 else {
@@ -143,7 +143,7 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size)
         }
     }
     else {
-        printf("Erreur au niveau du numero de socket ou connexion non etablie\n");
+        printf("Erreur : numero de socket ou connexion non établie \n");
         exit(EXIT_FAILURE);
     } 
     
@@ -211,7 +211,7 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_sock_addr addr) {
         /* Incrémentation de PA */
         PA = (PA +1) % 2;
     }
-    // sinon, n°seq != PA, rejet de la DT => PA reste le même
+    /* sinon, n°seq != PA, rejet de la DT => PA reste le même */
 
     /* Construction d'un ACK */
     // Header
@@ -222,7 +222,7 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_sock_addr addr) {
     ack.header.ack = 1;
     ack.header.fin = 0;
 
-    ack.payload.size = 0; // on n'envoie pas de DU
+    ack.payload.size = 0; // on n'envoie pas de DU 
 
     /* Envoi de l'ACK */
     IP_send(ack, addr);
